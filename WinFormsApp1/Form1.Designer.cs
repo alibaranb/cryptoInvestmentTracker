@@ -30,8 +30,9 @@
         {
             btnAddTab = new Button();
             panel1 = new Panel();
+            btnCalculate = new Button();
+            btnRemTab = new Button();
             tabControl1 = new TabControl();
-            button1 = new Button();
             panel1.SuspendLayout();
             SuspendLayout();
             // 
@@ -48,13 +49,36 @@
             // 
             // panel1
             // 
-            panel1.Controls.Add(button1);
+            panel1.Controls.Add(btnCalculate);
+            panel1.Controls.Add(btnRemTab);
             panel1.Controls.Add(btnAddTab);
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
             panel1.Size = new Size(669, 42);
             panel1.TabIndex = 3;
+            // 
+            // btnCalculate
+            // 
+            btnCalculate.Dock = DockStyle.Left;
+            btnCalculate.Location = new Point(150, 0);
+            btnCalculate.Name = "btnCalculate";
+            btnCalculate.Size = new Size(75, 42);
+            btnCalculate.TabIndex = 4;
+            btnCalculate.Text = "Calculate Profit";
+            btnCalculate.UseVisualStyleBackColor = true;
+            btnCalculate.Click += button2_Click;
+            // 
+            // btnRemTab
+            // 
+            btnRemTab.Dock = DockStyle.Left;
+            btnRemTab.Location = new Point(75, 0);
+            btnRemTab.Name = "btnRemTab";
+            btnRemTab.Size = new Size(75, 42);
+            btnRemTab.TabIndex = 3;
+            btnRemTab.Text = "Remove Tab";
+            btnRemTab.UseVisualStyleBackColor = true;
+            btnRemTab.Click += button1_Click;
             // 
             // tabControl1
             // 
@@ -64,17 +88,6 @@
             tabControl1.SelectedIndex = 0;
             tabControl1.Size = new Size(669, 501);
             tabControl1.TabIndex = 4;
-            // 
-            // button1
-            // 
-            button1.Dock = DockStyle.Left;
-            button1.Location = new Point(75, 0);
-            button1.Name = "button1";
-            button1.Size = new Size(75, 42);
-            button1.TabIndex = 3;
-            button1.Text = "Remove Tab";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
             // 
             // Form1
             // 
@@ -93,6 +106,7 @@
         private Button btnAddTab;
         private Panel panel1;
         private TabControl tabControl1;
-        private Button button1;
+        private Button btnRemTab;
+        private Button btnCalculate;
     }
 }

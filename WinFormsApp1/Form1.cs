@@ -1,11 +1,16 @@
 using System.Data;
+using System.Net.WebSockets;
+using System.Text.Json;
+using Websocket.Client;
 
 namespace WinFormsApp1
 {
     public partial class Form1 : Form
     {
         // Store each tab's data
-        Dictionary<string, DataTable> tabData = new Dictionary<string, DataTable>();
+        private Dictionary<string, DataTable> tabData = new Dictionary<string, DataTable>();
+        private WebsocketClient? _client;
+
 
         public Form1()
         {
@@ -27,10 +32,11 @@ namespace WinFormsApp1
             // Create DataTable for this tab
             DataTable table = new DataTable();
             table.Columns.Add("Coin");
-            table.Columns.Add("Amount", typeof(decimal));
-            table.Columns.Add("Buy Price", typeof(decimal));
-            table.Columns.Add("Buy Date", typeof(DateTime));
-            table.Columns.Add("Profit/Loss");
+            table.Columns.Add("Amount ($)", typeof(decimal));
+            table.Columns.Add("Buy Price ($)", typeof(decimal));
+            table.Columns.Add("Amount Bought", typeof(decimal));
+            table.Columns.Add("Current Price", typeof(decimal));
+            table.Columns.Add("Profit/Loss", typeof(decimal));
 
             // Create new TabPage
             var tab = new TabPage(tabName);
@@ -78,7 +84,19 @@ namespace WinFormsApp1
 
         private void button1_Click(object sender, EventArgs e)
         {
-            tabControl1.TabPages.Remove(tabControl1.SelectedTab);
+            if (tabControl1.TabCount > 0)
+            {
+                tabControl1.TabPages.Remove(tabControl1.SelectedTab);
+            }
+            else
+            {
+                MessageBox.Show("No tabs found to delete", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            
         }
     }
 }
