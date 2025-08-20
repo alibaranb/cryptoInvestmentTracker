@@ -1,7 +1,16 @@
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Data;
+using System.Globalization;
 using System.Net.WebSockets;
+using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using Websocket.Client;
+
 
 namespace WinFormsApp1
 {
@@ -10,16 +19,100 @@ namespace WinFormsApp1
         // Store each tab's data
         private Dictionary<string, DataTable> tabData = new Dictionary<string, DataTable>();
         private WebsocketClient? _client;
+        private ClientWebSocket _ws;
+        private System.Windows.Forms.Timer priceUpdateTimer;
 
 
         public Form1()
         {
             InitializeComponent();
         }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            priceUpdateTimer = new System.Windows.Forms.Timer();
+            priceUpdateTimer.Interval = 60_000;
+            priceUpdateTimer.Tick += PriceUpdateTimer_Tick;
+            priceUpdateTimer.Start();
+        }
+        private async Task<Dictionary<string, decimal>> GetCurrentPricesAsync(List<string> coinList)
+        {
+            Dictionary<string, decimal> prices = new();
+
+            using (HttpClient client = new HttpClient())
+            {
+                string url = "https://api.binance.com/api/v3/ticker/price";
+                var response = await client.GetStringAsync(url);
+                JArray allPrices = JArray.Parse(response);
+
+                foreach (string coin in coinList)
+                {
+                    var pair = allPrices.FirstOrDefault(p => p["symbol"]?.ToString() == coin.ToUpper() + "USDT");
+                    if (pair != null)
+                    {
+                        prices[coin.ToUpper()] = decimal.Parse(pair["price"].ToString(), CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            return prices;
+        }
+
+        private async void PriceUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                // 1. Tüm sekmelerden coin'leri topla
+                HashSet<string> allCoins = new HashSet<string>();
+
+                foreach (var table in tabData.Values)
+                {
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string coin = row["Coin"]?.ToString()?.ToUpper();
+                        if (!string.IsNullOrWhiteSpace(coin))
+                            allCoins.Add(coin);
+                    }
+                }
+
+                if (allCoins.Count == 0) return;
+
+                // 2. Binance REST API ile fiyatları al
+                var coinPrices = await GetCurrentPricesAsync(allCoins.ToList());
+
+                // 3. Tüm tablolarda fiyatları ve Profit/Loss değerlerini güncelle
+                foreach (var table in tabData.Values)
+                {
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string coin = row["Coin"]?.ToString()?.ToUpper();
+                        if (string.IsNullOrWhiteSpace(coin)) continue;
+
+                        if (coinPrices.TryGetValue(coin, out decimal currentPrice))
+                        {
+                            row["Current Price"] = currentPrice;
+
+                            // Profit/Loss hesapla
+                            if (decimal.TryParse(row["Buy Price ($)"]?.ToString(), out decimal buyPrice) &&
+                                decimal.TryParse(row["Amount Bought"]?.ToString(), out decimal amountBought))
+                            {
+                                decimal profitLoss = (currentPrice - buyPrice) * amountBought;
+                                row["Profit/Loss"] = profitLoss;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Fiyat güncellenirken hata oluştu:\n" + ex.Message);
+            }
+        }
+
+
+
 
         private void btnAddTab_Click(object sender, EventArgs e)
         {
-            // Ask user for a tab name
             string tabName = Prompt.ShowDialog("Enter tab name (e.g., August 2025):", "New Investment Tab");
 
             if (string.IsNullOrWhiteSpace(tabName)) return;
@@ -29,7 +122,6 @@ namespace WinFormsApp1
                 return;
             }
 
-            // Create DataTable for this tab
             DataTable table = new DataTable();
             table.Columns.Add("Coin");
             table.Columns.Add("Amount ($)", typeof(decimal));
@@ -38,10 +130,8 @@ namespace WinFormsApp1
             table.Columns.Add("Current Price", typeof(decimal));
             table.Columns.Add("Profit/Loss", typeof(decimal));
 
-            // Create new TabPage
             var tab = new TabPage(tabName);
 
-            // Create DataGridView
             var dgv = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -54,7 +144,6 @@ namespace WinFormsApp1
             tabControl1.TabPages.Add(tab);
             tabControl1.SelectedTab = tab;
 
-            // Store table in dictionary
             tabData[tabName] = table;
         }
 
@@ -94,9 +183,9 @@ namespace WinFormsApp1
             }
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private async void button2_Click(object sender, EventArgs e)
         {
-            
+            await Task.Run(() => PriceUpdateTimer_Tick(null, EventArgs.Empty));
         }
     }
 }
