@@ -40,8 +40,9 @@
             // 
             btnAddTab.Dock = DockStyle.Left;
             btnAddTab.Location = new Point(0, 0);
+            btnAddTab.Margin = new Padding(3, 4, 3, 4);
             btnAddTab.Name = "btnAddTab";
-            btnAddTab.Size = new Size(75, 42);
+            btnAddTab.Size = new Size(86, 56);
             btnAddTab.TabIndex = 2;
             btnAddTab.Text = "Add Tab";
             btnAddTab.UseVisualStyleBackColor = true;
@@ -54,16 +55,18 @@
             panel1.Controls.Add(btnAddTab);
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
+            panel1.Margin = new Padding(3, 4, 3, 4);
             panel1.Name = "panel1";
-            panel1.Size = new Size(669, 42);
+            panel1.Size = new Size(1041, 56);
             panel1.TabIndex = 3;
             // 
             // btnCalculate
             // 
             btnCalculate.Dock = DockStyle.Left;
-            btnCalculate.Location = new Point(150, 0);
+            btnCalculate.Location = new Point(172, 0);
+            btnCalculate.Margin = new Padding(3, 4, 3, 4);
             btnCalculate.Name = "btnCalculate";
-            btnCalculate.Size = new Size(75, 42);
+            btnCalculate.Size = new Size(86, 56);
             btnCalculate.TabIndex = 4;
             btnCalculate.Text = "Calculate Profit";
             btnCalculate.UseVisualStyleBackColor = true;
@@ -72,9 +75,10 @@
             // btnRemTab
             // 
             btnRemTab.Dock = DockStyle.Left;
-            btnRemTab.Location = new Point(75, 0);
+            btnRemTab.Location = new Point(86, 0);
+            btnRemTab.Margin = new Padding(3, 4, 3, 4);
             btnRemTab.Name = "btnRemTab";
-            btnRemTab.Size = new Size(75, 42);
+            btnRemTab.Size = new Size(86, 56);
             btnRemTab.TabIndex = 3;
             btnRemTab.Text = "Remove Tab";
             btnRemTab.UseVisualStyleBackColor = true;
@@ -83,19 +87,21 @@
             // tabControl1
             // 
             tabControl1.Dock = DockStyle.Fill;
-            tabControl1.Location = new Point(0, 42);
+            tabControl1.Location = new Point(0, 56);
+            tabControl1.Margin = new Padding(3, 4, 3, 4);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(669, 501);
+            tabControl1.Size = new Size(1041, 668);
             tabControl1.TabIndex = 4;
             // 
             // Form1
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(669, 543);
+            ClientSize = new Size(1041, 724);
             Controls.Add(tabControl1);
             Controls.Add(panel1);
+            Margin = new Padding(3, 4, 3, 4);
             Name = "Form1";
             Text = "Crypto Investment Calculator";
             panel1.ResumeLayout(false);

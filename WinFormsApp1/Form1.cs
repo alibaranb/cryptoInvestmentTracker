@@ -30,7 +30,7 @@ namespace WinFormsApp1
         private void Form1_Load(object sender, EventArgs e)
         {
             priceUpdateTimer = new System.Windows.Forms.Timer();
-            priceUpdateTimer.Interval = 60_000;
+            priceUpdateTimer.Interval = 60_000; // 1 dakika (60000 ms)
             priceUpdateTimer.Tick += PriceUpdateTimer_Tick;
             priceUpdateTimer.Start();
         }
@@ -79,6 +79,8 @@ namespace WinFormsApp1
                 // 2. Binance REST API ile fiyatları al
                 var coinPrices = await GetCurrentPricesAsync(allCoins.ToList());
 
+                decimal currentValue = 0;
+
                 // 3. Tüm tablolarda fiyatları ve Profit/Loss değerlerini güncelle
                 foreach (var table in tabData.Values)
                 {
@@ -89,14 +91,26 @@ namespace WinFormsApp1
 
                         if (coinPrices.TryGetValue(coin, out decimal currentPrice))
                         {
-                            row["Current Price"] = currentPrice;
+                            row["Current Price ($)"] = Math.Round(currentPrice, 4);
+
+                            // Güncel Değer hesapla
+                            if (decimal.TryParse(row["Invested ($)"]?.ToString(), out decimal invested) &&
+                                decimal.TryParse(row["Buy Price ($)"]?.ToString(), out decimal buyPrice))
+                            {
+                                decimal amount = Math.Round(invested / buyPrice, 4);
+                                row["Amount"] = amount;
+
+                                currentValue = Math.Round(amount * currentPrice, 4);
+                                row["Current Value ($)"] = currentValue;
+                            }
+
 
                             // Profit/Loss hesapla
-                            if (decimal.TryParse(row["Buy Price ($)"]?.ToString(), out decimal buyPrice) &&
-                                decimal.TryParse(row["Amount Bought"]?.ToString(), out decimal amountBought))
+                            if (decimal.TryParse(row["Invested ($)"]?.ToString(), out decimal buyPriceDollar) &&
+                                decimal.TryParse(row["Amount"]?.ToString(), out decimal amountBoughtCell))
                             {
-                                decimal profitLoss = (currentPrice - buyPrice) * amountBought;
-                                row["Profit/Loss"] = profitLoss;
+                                decimal profitLoss = Math.Round(((currentValue - buyPriceDollar) / 40 * 100), 4);
+                                row["Profit/Loss (%)"] = profitLoss;
                             }
                         }
                     }
@@ -113,6 +127,7 @@ namespace WinFormsApp1
 
         private void btnAddTab_Click(object sender, EventArgs e)
         {
+            // Ask user for a tab name
             string tabName = Prompt.ShowDialog("Enter tab name (e.g., August 2025):", "New Investment Tab");
 
             if (string.IsNullOrWhiteSpace(tabName)) return;
@@ -122,16 +137,20 @@ namespace WinFormsApp1
                 return;
             }
 
+            // Create DataTable for this tab
             DataTable table = new DataTable();
             table.Columns.Add("Coin");
-            table.Columns.Add("Amount ($)", typeof(decimal));
+            table.Columns.Add("Invested ($)", typeof(decimal));
             table.Columns.Add("Buy Price ($)", typeof(decimal));
-            table.Columns.Add("Amount Bought", typeof(decimal));
-            table.Columns.Add("Current Price", typeof(decimal));
-            table.Columns.Add("Profit/Loss", typeof(decimal));
+            table.Columns.Add("Amount", typeof(decimal));
+            table.Columns.Add("Current Price ($)", typeof(decimal));
+            table.Columns.Add("Current Value ($)", typeof(decimal));
+            table.Columns.Add("Profit/Loss (%)", typeof(decimal));
 
+            // Create new TabPage
             var tab = new TabPage(tabName);
 
+            // Create DataGridView
             var dgv = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -144,7 +163,13 @@ namespace WinFormsApp1
             tabControl1.TabPages.Add(tab);
             tabControl1.SelectedTab = tab;
 
+            // Store table in dictionary
             tabData[tabName] = table;
+
+            dgv.Columns["Amount"].ReadOnly = true;
+            dgv.Columns["Current Price ($)"].ReadOnly = true;
+            dgv.Columns["Current Value ($)"].ReadOnly = true;
+            dgv.Columns["Profit/Loss (%)"].ReadOnly = true;
         }
 
         public static class Prompt
