@@ -8,6 +8,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Diagnostics;
 
 namespace WinFormsApp1
 {
@@ -75,61 +76,99 @@ namespace WinFormsApp1
         {
             try
             {
+                string selectedTabName = null;
+
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    if (tabControl1.SelectedTab != null)
+                        selectedTabName = tabControl1.SelectedTab.Text;
+                }));
+
+                if (string.IsNullOrEmpty(selectedTabName))
+                    return;
+
+                if (!tabData.TryGetValue(selectedTabName, out DataTable table))
+                    return;
+
+                List<DataRow> rows;
+                lock (table)
+                {
+                    rows = table.AsEnumerable().ToList();
+                }
+
                 HashSet<string> allCoins = new();
 
-                foreach (var table in tabData.Values)
+                foreach (var row in rows)
                 {
-                    foreach (DataRow row in table.Rows)
-                    {
-                        string coin = row["Coin"]?.ToString()?.ToUpper();
-                        if (!string.IsNullOrWhiteSpace(coin))
-                            allCoins.Add(coin);
-                    }
+                    string coin = row["Coin"]?.ToString()?.ToUpper();
+                    if (!string.IsNullOrWhiteSpace(coin))
+                        allCoins.Add(coin);
                 }
 
                 if (allCoins.Count == 0) return;
 
                 var coinPrices = await GetCurrentPricesAsync(allCoins.ToList());
 
-                foreach (var table in tabData.Values)
+                foreach (var row in rows)
                 {
-                    foreach (DataRow row in table.Rows)
+                    string coin = row["Coin"]?.ToString()?.ToUpper();
+                    if (string.IsNullOrWhiteSpace(coin)) continue;
+
+                    if (coinPrices.TryGetValue(coin, out decimal currentPrice))
                     {
-                        string coin = row["Coin"]?.ToString()?.ToUpper();
-                        if (string.IsNullOrWhiteSpace(coin)) continue;
+                        row["CurrentPrice"] = Math.Round(currentPrice, 4);
 
-                        if (coinPrices.TryGetValue(coin, out decimal currentPrice))
+                        if (decimal.TryParse(row["Invested"]?.ToString(), out decimal invested) &&
+                            decimal.TryParse(row["BuyPrice"]?.ToString(), out decimal buyPrice))
                         {
-                            row["CurrentPrice"] = Math.Round(currentPrice, 4);
+                            decimal amount = Math.Round(invested / buyPrice, 4);
+                            row["Amount"] = amount;
 
-                            if (decimal.TryParse(row["Invested"]?.ToString(), out decimal invested) &&
-                                decimal.TryParse(row["BuyPrice"]?.ToString(), out decimal buyPrice))
+                            decimal currentValue = Math.Round(amount * currentPrice, 4);
+                            row["CurrentValue"] = currentValue;
+
+                            if (invested != 0)
                             {
-                                decimal amount = Math.Round(invested / buyPrice, 4);
-                                row["Amount"] = amount;
-
-                                decimal currentValue = Math.Round(amount * currentPrice, 4);
-                                row["CurrentValue"] = currentValue;
-
-                                if (invested != 0)
-                                {
-                                    decimal profitLoss = Math.Round(((currentValue - invested) / invested) * 100, 4);
-                                    row["ProfitLoss"] = profitLoss;
-                                }
-                                else
-                                {
-                                    row["ProfitLoss"] = 0m;
-                                }
+                                decimal profitLoss = Math.Round(((currentValue - invested) / invested) * 100, 4);
+                                row["ProfitLoss"] = profitLoss;
+                            }
+                            else
+                            {
+                                row["ProfitLoss"] = 0m;
                             }
                         }
                     }
                 }
+
+                decimal totalInvested = 0;
+                decimal totalValue = 0;
+
+                foreach (var row in rows)
+                {
+                    if (row["Invested"] != DBNull.Value)
+                        totalInvested += Convert.ToDecimal(row["Invested"]);
+
+                    if (row["CurrentValue"] != DBNull.Value)
+                        totalValue += Convert.ToDecimal(row["CurrentValue"]);
+                }
+
+                // Calculate total profit/loss in dollars (not percentage)
+                decimal totalProfitLoss = totalValue - totalInvested;
+
+                // Update UI labels on UI thread with USD formatting
+                this.Invoke((MethodInvoker)(() =>
+                {
+                    lblInvested.Text = "Total Invested: $" + totalInvested.ToString("N2");
+                    lblCurrentValue.Text = "Total Current Value: $" + totalValue.ToString("N2");
+                    lblProfitLoss.Text = "Total Profit/Loss: $" + totalProfitLoss.ToString("N2");
+                }));
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error updating prices:\n" + ex.Message);
             }
         }
+
 
         private void btnAddTab_Click(object sender, EventArgs e)
         {
@@ -305,5 +344,46 @@ namespace WinFormsApp1
         {
             await Task.Run(() => PriceUpdateTimer_Tick(null, EventArgs.Empty));
         }
+
+        private void btnRemoveRow_Click(object sender, EventArgs e)
+        {
+            if (tabControl1.SelectedTab == null)
+            {
+                MessageBox.Show("No tab is currently selected.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string tabName = tabControl1.SelectedTab.Text;
+
+            if (!tabData.TryGetValue(tabName, out DataTable table))
+            {
+                MessageBox.Show("No data found for the selected tab.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Find the DataGridView inside the selected tab
+            var dgv = tabControl1.SelectedTab.Controls.OfType<DataGridView>().FirstOrDefault();
+            if (dgv == null)
+            {
+                MessageBox.Show("DataGridView not found in the selected tab.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (dgv.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select a full row to delete.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Remove selected rows from the DataTable
+            foreach (DataGridViewRow row in dgv.SelectedRows.Cast<DataGridViewRow>().OrderByDescending(r => r.Index))
+            {
+                if (!row.IsNewRow)
+                {
+                    dgv.Rows.Remove(row);
+                }
+            }
+        }
+
     }
 }
